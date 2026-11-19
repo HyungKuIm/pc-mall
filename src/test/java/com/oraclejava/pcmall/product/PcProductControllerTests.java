@@ -15,6 +15,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -31,6 +32,7 @@ class PcProductControllerTests {
 	private MockMvc mockMvc;
 
 	@Test
+	@WithMockUser(roles = "ADMIN")
 	void crudFlow() throws Exception {
 		// 등록
 		MvcResult created = mockMvc.perform(multipart("/api/pc-products")
@@ -76,6 +78,7 @@ class PcProductControllerTests {
 	}
 
 	@Test
+	@WithMockUser(roles = "ADMIN")
 	void createWithInvalidInputReturnsBadRequest() throws Exception {
 		mockMvc.perform(multipart("/api/pc-products").param("price", "-1"))
 			.andExpect(status().isBadRequest());

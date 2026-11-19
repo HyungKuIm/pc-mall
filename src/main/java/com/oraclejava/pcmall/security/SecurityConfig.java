@@ -5,8 +5,11 @@ import java.util.Map;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
@@ -14,6 +17,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+
+import com.oraclejava.pcmall.customer.Role;
 
 import jakarta.servlet.http.HttpServletResponse;
 import tools.jackson.databind.json.JsonMapper;
@@ -39,7 +44,10 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers("/health", "/error").permitAll()
 				.requestMatchers("/api/customers/signup", "/api/login").permitAll()
-				.requestMatchers("/api/pc-products/**").permitAll()
+				// 상품: 조회는 누구나, 등록/수정/삭제는 관리자만
+				.requestMatchers(HttpMethod.GET, "/api/pc-products/**").permitAll()
+				.requestMatchers("/api/pc-products/**").hasRole(Role.ADMIN.name())
+				.requestMatchers("/api/admin/**").hasRole(Role.ADMIN.name())
 				.anyRequest().authenticated())
 			.formLogin(form -> form
 				.loginProcessingUrl("/api/login")
@@ -48,7 +56,8 @@ public class SecurityConfig {
 				.successHandler((request, response, authentication) -> {
 					CustomerUserDetails user = (CustomerUserDetails) authentication.getPrincipal();
 					writeJson(response, jsonMapper, HttpStatus.OK,
-							Map.of("id", user.getId(), "name", user.getName(), "mail", user.getUsername()));
+							Map.of("id", user.getId(), "name", user.getName(), "mail", user.getUsername(),
+									"role", user.getRole().name()));
 				})
 				.failureHandler((request, response, exception) -> writeJson(response, jsonMapper,
 						HttpStatus.UNAUTHORIZED, Map.of("message", "메일 또는 비밀번호가 올바르지 않습니다."))))
@@ -57,6 +66,12 @@ public class SecurityConfig {
 				.logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)))
 			.exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
 		return http.build();
+	}
+
+	/** 관리자는 일반 회원 권한도 모두 가진다. */
+	@Bean
+	static RoleHierarchy roleHierarchy() {
+		return RoleHierarchyImpl.fromHierarchy(Role.ADMIN.authority() + " > " + Role.CUSTOMER.authority());
 	}
 
 	/** {bcrypt} 접두어 방식의 위임 인코더 (기본 BCrypt) */

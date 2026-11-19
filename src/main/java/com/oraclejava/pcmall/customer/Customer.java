@@ -32,13 +32,24 @@ public class Customer {
 	@Column(name = "mail", nullable = false, unique = true, length = 255)
 	private String mail;
 
+	/** 역할 (ADMIN: 관리자, CUSTOMER: 일반 회원). 값이 없으면 일반 회원으로 취급한다. */
+	@Column(name = "role", length = 20)
+	private String role;
+
 	protected Customer() {
 	}
 
+	/** 회원 가입용. 가입한 회원은 항상 일반 회원(CUSTOMER)이다. */
 	public Customer(String name, String encodedPassword, String mail) {
 		this.name = name;
 		this.password = encodedPassword;
 		this.mail = mail;
+		this.role = Role.CUSTOMER.name();
+	}
+
+	/** 역할. null 이거나 알 수 없는 값이면 CUSTOMER. */
+	public Role getRole() {
+		return Role.from(role);
 	}
 
 	public Long getId() {
