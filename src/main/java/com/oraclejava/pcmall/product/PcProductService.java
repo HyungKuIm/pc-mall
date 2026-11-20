@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,6 +66,13 @@ public class PcProductService {
 	@Transactional
 	public void delete(Long id) {
 		repository.delete(get(id));
+		try {
+			repository.flush();
+		}
+		catch (DataIntegrityViolationException ex) {
+			// 주문선(order_line)에서 참조 중인 상품은 삭제할 수 없다
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "주문 내역이 있는 상품은 삭제할 수 없습니다.");
+		}
 	}
 
 	private PcProduct get(Long id) {
